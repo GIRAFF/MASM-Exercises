@@ -2,6 +2,7 @@
 .MODEL FLAT, STDCALL
 	OPTION CASEMAP: NONE
 	EXTERN CharToOemA@8: PROC
+	EXTERN WriteConsoleA@20: PROC
 	EXTERN ReadConsoleA@20: PROC
 	EXTERN GetStdHandle@4: PROC
 	EXTERN lstrlenA@4: PROC
@@ -24,12 +25,17 @@
 	SND DD ?   ; second operand
 	FIN DD ?   ; result
 	ECODE DD 0 ; exit code
+	THREE DD 3 ; three
+	EIGHT DD 8 ; eight?
+	HEX DD 10h ; SIXTEEN??!?!
 .CODE
-m_BufToIntOct MACRO len, buff, dest
+m_BufToIntOct MACRO buff, dest
 	LOCAL CONVERT, FAIL, LEND
 	; checking if the num has enough digits
-	CMP len, 4
-	JL FAIL
+	PUSH OFFSET buff
+	CALL lstrlenA@4
+	;CMP EAX, 3
+	;JL FAIL
 	MOV ESI, OFFSET buff
 	XOR BX, BX
 	XOR EAX, EAX
@@ -37,26 +43,35 @@ CONVERT:
 	MOV BL, [ESI]
 	SUB BL, '0'
 	CMP BL, 8
-	JNB FAIL  ;JAE~JGE for unsigned
-	MUL 8
+	;JNB FAIL  ;JAE~JGE for unsigned
+	JNB LEND ; cause I don't give a hell...
+	MUL EIGHT
 	ADD AX, BX
 	INC ESI
 	; if the string is over
-	CMP [ESI], 0
-	JE LEND
+	;CMP [ESI], 0
+	;JE LEND
 JMP CONVERT
-FAIL:
-	PUSH 1
-	CALL ExitProcess@4
+;FAIL:
+	;; for the glory of \r\n
+	;CMP [ESI], 0dh
+	;JE LEND
+	;CMP [ESI], 0ah
+	;JE LEND
+	;PUSH 1
+	;CALL ExitProcess@4
 LEND:
 	MOV dest, EAX
 ENDM
 
 m_NumToHexString MACRO num, buffaddr
 	LOCAL CONV, LTEN, ADDCHAR
+	MOV EDI, buffaddr + 100
+	STD
 	MOV EAX, num 
 CONV:
-	DIV 10h:DWORD
+	CDQ
+	DIV HEX
 	CMP EDX, 10
 	JL LTEN
 	SUB EDX, 10
@@ -65,23 +80,25 @@ CONV:
 LTEN:
 	ADD EDX, '0'
 ADDCHAR:
-	MOV [buffaddr], EDX
-	INC buffaddr
+	PUSH EAX
+	MOV EAX, EDX
+	STOSB
+	;INC EDI
+	POP EAX
 	CMP EAX, 0
 JA CONV
+	;MOV buffaddr, EDI
 ENDM
 
-m_MakeExprString MACRO buffaddr, first, second, res
-	MOV EBX, buffaddr
-	m_NumToHexString first, buffaddr
-	MOV buffaddr, MINUS
-	ADD buffaddr, 3
-	m_NumToHexString second, buffaddr
-	MOV buffaddr, sEQ
-	ADD buffaddr, 3
-	m_NumToHexString res, buffaddr
-	MOV buffaddr, EBX
-ENDM
+;m_MakeExprString MACRO buffaddr, first, second, res
+	;MOV EBX, buffaddr
+	;m_NumToHexString first, buffaddr
+	;;MOV buffaddr, MINUS
+	;m_NumToHexString second, buffaddr
+	;;MOV buffaddr, sEQ
+	;m_NumToHexString res, buffaddr
+	;;MOV buffaddr, EBX
+;ENDM
 
 MAIN PROC
 	; MSG1 & MSG2 to OEM
@@ -120,7 +137,7 @@ MAIN PROC
 	PUSH DIN
 	CALL ReadConsoleA@20
 	; put the num from BUF to int memcell
-	m_BufToIntOct LENS, BUF, FIRST
+	m_BufToIntOct BUF, FIRST
 
 	; 'please, put the second one'
 	PUSH OFFSET MSG2
@@ -139,26 +156,27 @@ MAIN PROC
 	PUSH DIN
 	CALL ReadConsoleA@20
 	; put the num from BUF to int memcell
-	m_BufToIntOct LENS, BUF, SND
+	m_BufToIntOct BUF, SND
 
 	MOV EAX, FIRST
 	SUB EAX, SND
 	MOV FIN, EAX
 
 	; TODO use macro to make it one string
-	m_MakeExprString OFFSET BUF, FIRST, SND, FIN
-	MOV EAX, OFFSET BUF
-	PUSH EAX
-	PUSH EAX
-	CALL CharToOemA@8
+	;m_MakeExprString OFFSET BUF, FIRST, SND, FIN
+	m_NumToHexString FIN, OFFSET BUF
+	;MOV EAX, OFFSET BUF
+	;PUSH EAX
+	;PUSH EAX
+	;CALL CharToOemA@8
 
 	; print the result
-	PUSH OFFSET BUF
+	PUSH EDI
 	PUSH lstrlenA@4
 	PUSH 0
 	PUSH OFFSET LENS
 	PUSH EAX
-	PUSH OFFSET BUF
+	PUSH EDI
 	PUSH DOUT
 	CALL WriteConsoleA@20
 

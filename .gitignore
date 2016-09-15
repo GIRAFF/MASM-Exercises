@@ -1,4 +1,6 @@
 *.exe
 *.o
+*.err
+*.cp1251.asm
 olly/*
 libs/*
