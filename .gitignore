@@ -2,5 +2,6 @@
 *.o
 *.err
 *.cp1251.asm
+*.swp
 olly/*
 libs/*

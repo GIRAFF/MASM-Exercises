@@ -34,8 +34,6 @@ m_BufToIntOct MACRO buff, dest
 	; checking if the num has enough digits
 	PUSH OFFSET buff
 	CALL lstrlenA@4
-	;CMP EAX, 3
-	;JL FAIL
 	MOV ESI, OFFSET buff
 	XOR BX, BX
 	XOR EAX, EAX
@@ -43,32 +41,19 @@ CONVERT:
 	MOV BL, [ESI]
 	SUB BL, '0'
 	CMP BL, 8
-	;JNB FAIL  ;JAE~JGE for unsigned
 	JNB LEND ; cause I don't give a hell...
 	MUL EIGHT
 	ADD AX, BX
 	INC ESI
-	; if the string is over
-	;CMP [ESI], 0
-	;JE LEND
 JMP CONVERT
-;FAIL:
-	;; for the glory of \r\n
-	;CMP [ESI], 0dh
-	;JE LEND
-	;CMP [ESI], 0ah
-	;JE LEND
-	;PUSH 1
-	;CALL ExitProcess@4
 LEND:
 	MOV dest, EAX
 ENDM
 
-m_NumToHexString MACRO num, buffaddr
+m_NumToHexPrint MACRO num;, buffaddr
 	LOCAL CONV, LTEN, ADDCHAR
-	MOV EDI, buffaddr + 100
-	STD
 	MOV EAX, num 
+	XOR EBX, EBX
 CONV:
 	CDQ
 	DIV HEX
@@ -80,25 +65,23 @@ CONV:
 LTEN:
 	ADD EDX, '0'
 ADDCHAR:
-	PUSH EAX
-	MOV EAX, EDX
-	STOSB
-	;INC EDI
-	POP EAX
+	PUSH EDX
+	INC EBX
 	CMP EAX, 0
-JA CONV
-	;MOV buffaddr, EDI
+JG CONV
+PRINT:
+	POP EAX
+	MOV BUF, AL
+	PUSH 0
+	PUSH OFFSET LENS
+	PUSH 1
+	PUSH OFFSET BUF
+	PUSH DOUT
+	CALL WriteConsoleA@20
+	DEC EBX
+	CMP EBX, 0
+	JG PRINT
 ENDM
-
-;m_MakeExprString MACRO buffaddr, first, second, res
-	;MOV EBX, buffaddr
-	;m_NumToHexString first, buffaddr
-	;;MOV buffaddr, MINUS
-	;m_NumToHexString second, buffaddr
-	;;MOV buffaddr, sEQ
-	;m_NumToHexString res, buffaddr
-	;;MOV buffaddr, EBX
-;ENDM
 
 MAIN PROC
 	; MSG1 & MSG2 to OEM
@@ -161,25 +144,8 @@ MAIN PROC
 	MOV EAX, FIRST
 	SUB EAX, SND
 	MOV FIN, EAX
-
-	; TODO use macro to make it one string
-	;m_MakeExprString OFFSET BUF, FIRST, SND, FIN
-	m_NumToHexString FIN, OFFSET BUF
-	;MOV EAX, OFFSET BUF
-	;PUSH EAX
-	;PUSH EAX
-	;CALL CharToOemA@8
-
-	; print the result
-	PUSH EDI
-	PUSH lstrlenA@4
-	PUSH 0
-	PUSH OFFSET LENS
-	PUSH EAX
-	PUSH EDI
-	PUSH DOUT
-	CALL WriteConsoleA@20
-
+	; print result
+	m_NumToHexPrint FIN;, OFFSET BUF
 EXIT:
 	PUSH ECODE
 	CALL ExitProcess@4
