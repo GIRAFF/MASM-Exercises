@@ -3,5 +3,7 @@
 *.err
 *.cp1251.asm
 *.swp
+*.out
 olly/*
 libs/*
+tmp/*
