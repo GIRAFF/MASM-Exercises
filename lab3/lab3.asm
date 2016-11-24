@@ -17,7 +17,6 @@ foonc proc x:real4
 	fdivrp   ; -:ctg(x):x/3:
 	fsubrp   ; -:ctg(x)-x/3:
 	fstp buf ; -:
-	; Типо вернул... -_-
 	ret
 foonc endp
 
