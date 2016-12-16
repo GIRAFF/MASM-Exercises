@@ -65,6 +65,7 @@ local fin, clop, move, fall
 	fall:
 		mov term, 1
 	fin:
+		inc edx
 		inc ebx
 		print edx
 endm
